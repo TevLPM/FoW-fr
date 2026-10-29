@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fog Explorer — France</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+<style>
+:root{
+  --bg:#171614;--sur:#1c1b19;--sur2:#201f1d;--suro:#1d1c1a;--surd:#2d2c2a;
+  --div:#262523;--bdr:#393836;
+  --tx:#cdccca;--txm:#797876;--txf:#5a5957;
+  --pr:#4f98a3;--prh:#227f8b;--prhl:#313b3b;
+  --ok:#6daa45;--okhl:#3a4435;
+  --wa:#fdab43;--wahlm:#564b3e;
+  --go:#e8af34;
+  --sd-sm:0 1px 2px oklch(0 0 0/.2);
+  --sd-md:0 4px 12px oklch(0 0 0/.3);
+  --sd-lg:0 12px 32px oklch(0 0 0/.4);
+  --r-sm:.375rem;--r-md:.5rem;--r-lg:.75rem;--r-xl:1rem;--r-full:9999px;
+  --fb:'Inter',system-ui,sans-serif;--fd:'Instrument Serif',Georgia,serif;
+  --xs:clamp(.75rem,.7rem + .25vw,.875rem);
+  --sm:clamp(.875rem,.8rem + .35vw,1rem);
+  --bs:clamp(1rem,.95rem + .25vw,1.125rem);
+  --lg:clamp(1.125rem,1rem + .75vw,1.5rem);
+  --xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);
+  --s1:.25rem;--s2:.5rem;--s3:.75rem;--s4:1rem;--s5:1.25rem;--s6:1.5rem;--s8:2rem;--s10:2.5rem;
+  --tr:180ms cubic-bezier(.16,1,.3,1);
+}
+[data-theme="light"]{
+  --bg:#f7f6f2;--sur:#f9f8f5;--sur2:#fbfbf9;--suro:#f3f0ec;--surd:#e6e4df;
+  --div:#dcd9d5;--bdr:#d4d1ca;
+  --tx:#28251d;--txm:#7a7974;--txf:#bab9b4;
+  --pr:#01696f;--prh:#0c4e54;--prhl:#cedcd8;
+  --ok:#437a22;--okhl:#d4dfcc;
+  --wa:#da7101;--wahlm:#e7d7c4;
+  --go:#d19900;
+  --sd-sm:0 1px 2px oklch(.2 .01 80/.06);
+  --sd-md:0 4px 12px oklch(.2 .01 80/.08);
+  --sd-lg:0 12px 32px oklch(.2 .01 80/.12);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body{height:100dvh;overflow:hidden;display:flex;flex-direction:column;font-family:var(--fb);font-size:var(--bs);color:var(--tx);background:var(--bg)}
+button{cursor:pointer;background:none;border:none;font:inherit;color:inherit;transition:color var(--tr),background var(--tr)}
+input{font:inherit;color:inherit}
+.hdr{display:flex;align-items:center;gap:var(--s3);padding:0 var(--s5);height:52px;background:var(--sur);border-bottom:1px solid var(--bdr);flex-shrink:0;z-index:200}
+.logo{display:flex;align-items:center;gap:var(--s2)}
+.logo svg{color:var(--pr)}
+.logo-t{font-family:var(--fd);font-size:1.2rem}
+.bdg{padding:2px var(--s2);border-radius:var(--r-full);font-size:.7rem;font-weight:600;background:var(--prhl);color:var(--pr)}
+.hdr-sp{flex:1}
+.hbtn{width:34px;height:34px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:var(--txm)}
+.hbtn:hover{background:var(--suro);color:var(--tx)}
+.body{flex:1;display:flex;overflow:hidden;position:relative}
+.sb{width:320px;flex-shrink:0;display:flex;flex-direction:column;background:var(--sur);border-right:1px solid var(--bdr);overflow:hidden;z-index:100}
+.sb-sc{flex:1;overflow-y:auto;padding:var(--s4)}
+.sb-sc::-webkit-scrollbar{width:3px}
+.sb-sc::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:var(--r-full)}
+.dz{border:2px dashed var(--bdr);border-radius:var(--r-xl);padding:var(--s8) var(--s5);text-align:center;cursor:pointer;transition:border-color var(--tr),background var(--tr)}
+.dz:hover,.dz.over{border-color:var(--pr);background:color-mix(in oklch,var(--pr) 6%,var(--sur))}
+.dz svg{color:var(--pr);margin:0 auto var(--s3)}
+.dz h3{font-size:var(--sm);font-weight:600;margin-bottom:var(--s1)}
+.dz p{font-size:var(--xs);color:var(--txm)}
+.dz .hint{margin-top:var(--s2);font-size:var(--xs);color:var(--txf)}
+#pw{padding:var(--s2) 0}
+.pb-bg{background:var(--surd);border-radius:var(--r-full);height:5px;overflow:hidden;margin:var(--s2) 0}
+.pb-fill{height:100%;background:var(--pr);border-radius:var(--r-full);transition:width .3s ease;width:0%}
+.pm{font-size:var(--xs);color:var(--txm);text-align:center}
+.tabs{display:flex;gap:2px;background:var(--suro);border-radius:var(--r-lg);padding:3px;margin-bottom:var(--s3)}
+.tab{flex:1;padding:var(--s2) 4px;border-radius:calc(var(--r-lg) - 3px);font-size:var(--xs);font-weight:500;text-align:center;color:var(--txm);transition:background var(--tr),color var(--tr),box-shadow var(--tr)}
+.tab.on{background:var(--sur);color:var(--tx);box-shadow:var(--sd-sm)}
+.tab:hover:not(.on){color:var(--tx)}
+.gst{background:var(--suro);border-radius:var(--r-lg);padding:var(--s4);margin-bottom:var(--s3)}
+.gst-l{font-size:var(--xs);color:var(--txm);margin-bottom:var(--s1)}
+.gst-v{font-family:var(--fd);font-size:var(--xl);color:var(--pr);line-height:1.1}
+.gst-s{font-size:var(--xs);color:var(--txm);margin-top:4px}
+.srch{position:relative;margin-bottom:var(--s3)}
+.srch svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--txf);pointer-events:none}
+.srch input{width:100%;padding:var(--s2) var(--s3) var(--s2) 32px;background:var(--suro);border:1px solid var(--bdr);border-radius:var(--r-md);font-size:var(--sm);color:var(--tx);outline:none;transition:border-color var(--tr),box-shadow var(--tr)}
+.srch input:focus{border-color:var(--pr);box-shadow:0 0 0 3px color-mix(in oklch,var(--pr) 18%,transparent)}
+.elist{display:flex;flex-direction:column;gap:2px}
+.ei{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-radius:var(--r-md);cursor:pointer;border:1px solid transparent;transition:background var(--tr),border-color var(--tr)}
+.ei:hover{background:var(--suro)}
+.ei.sel{background:var(--prhl);border-color:color-mix(in oklch,var(--pr) 30%,transparent)}
+.ei-rk{width:22px;font-size:11px;color:var(--txf);text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ei-bar{flex:1;min-width:0}
+.ei-name{font-size:var(--sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px}
+.ei-bg{background:var(--surd);border-radius:var(--r-full);height:3px;overflow:hidden}
+.ei-fill{height:100%;border-radius:var(--r-full);transition:width .6s cubic-bezier(.16,1,.3,1)}
+.ei-pct{width:54px;font-size:11px;color:var(--txm);text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.ca{background:var(--ok)}.cb{background:var(--pr)}.cc{background:var(--go)}.cd{background:var(--wa)}.ce{background:var(--surd)}
+#map{flex:1;z-index:1;background:#0d0d1a}
+.leaflet-container{background:#0d0d1a!important;font-family:var(--fb)!important}
+.ifl{position:absolute;bottom:var(--s6);right:var(--s6);z-index:400;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r-xl);padding:var(--s5);box-shadow:var(--sd-lg);min-width:200px;pointer-events:none;transition:opacity var(--tr),transform var(--tr)}
+.ifl.hide{opacity:0;transform:translateY(6px)}
+.ifl-name{font-family:var(--fd);font-size:var(--lg);line-height:1.2;margin-bottom:2px}
+.ifl-type{font-size:var(--xs);color:var(--txm);margin-bottom:var(--s3)}
+.ifl-pct{font-family:var(--fd);font-size:2.4rem;line-height:1;color:var(--pr)}
+.ifl-sub{font-size:var(--xs);color:var(--txm);margin-top:4px}
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:var(--s10) var(--s4);color:var(--txm)}
+.empty svg{color:var(--txf);margin-bottom:var(--s4)}
+.empty h3{color:var(--tx);font-size:var(--bs);margin-bottom:var(--s2)}
+.empty p{font-size:var(--sm);max-width:26ch}
+@media(max-width:700px){
+  .sb{position:absolute;bottom:0;left:0;right:0;width:100%;height:45dvh;border-right:none;border-top:1px solid var(--bdr)}
+  .body{flex-direction:column}
+  #map{flex:1}
+  .ifl{bottom:calc(45dvh + var(--s3));right:var(--s3)}
+}
+
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="logo">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+      <circle cx="13" cy="13" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.25"/>
+      <circle cx="13" cy="13" r="6" stroke="currentColor" stroke-width="1.5" opacity="0.55"/>
+      <circle cx="13" cy="13" r="2.5" fill="currentColor"/>
+      <path d="M13 3v2.5M13 20.5V23M3 13h2.5M20.5 13H23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+    </svg>
+    <span class="logo-t">Fog Explorer</span>
+  </div>
+  <span class="bdg">France</span>
+  <div class="hdr-sp"></div>
+  <button class="hbtn" id="themeBtn" aria-label="Thème">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</header>
+<div class="body">
+  <aside class="sb">
+    <div class="sb-sc" id="sb">
+      <div class="dz" id="dz">
+        <svg width="38" height="38" viewBox="0 0 38 38" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="32" height="32" rx="4" opacity="0.2"/>
+          <path d="M19 26V12" stroke-linecap="round"/>
+          <path d="M13 18l6-6 6 6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 27h20" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+        <h3>Importer la sauvegarde</h3>
+        <p>Glisse-dépose ton dossier <strong>Sync</strong></p>
+        <p class="hint">ou clique pour choisir les fichiers</p>
+      </div>
+      <input type="file" id="fi" multiple style="display:none"/>
+      <div class="empty" id="emp">
+        <svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.2">
+          <circle cx="22" cy="22" r="18" opacity="0.25"/>
+          <path d="M14 22h16M22 14v16" stroke-linecap="round" opacity="0.4"/>
+        </svg>
+        <h3>Aucune donnée</h3>
+        <p>Importe ton dossier Sync pour visualiser ta progression</p>
+      </div>
+    </div>
+  </aside>
+  <div id="map"></div>
+
+  <div class="ifl hide" id="ifl">
+    <div class="ifl-name" id="ifl-n"></div>
+    <div class="ifl-type" id="ifl-t"></div>
+    <div class="ifl-pct" id="ifl-p"></div>
+    <div class="ifl-sub">surface découverte</div>
+  </div>
+</div>
+
+<script>
+// Theme
+const H=document.documentElement;
+let theme=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+H.dataset.theme=theme;
+document.getElementById('themeBtn').addEventListener('click',()=>{
+  theme=theme==='dark'?'light':'dark';
+  H.dataset.theme=theme;
+  document.getElementById('themeBtn').innerHTML=theme==='dark'
+    ?'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+    :'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>';
+  if(leafMap){ leafMap.removeLayer(tileL); tileL=addTile(); }
+});
+
+// Fog of World file decoding
+const FM1="olhwjsktri";
+const FE={};for(let i=0;i<FM1.length;i++) FE[FM1[i]]=i;
+const pause=()=>new Promise(r=>setTimeout(r,0));
+const POPCNT=new Uint8Array(256); for(let i=0;i<256;i++){let n=i,c=0; while(n){c+=n&1;n>>=1;} POPCNT[i]=c;}
+const MAP_W=512,TW=128,TH_SIZE=TW*TW*2,BM_SZ=512,BM_EX=3,BLK=BM_SZ+BM_EX,BM_W=64;
+
+function decodeFilename(name){
+  const enc=name.slice(4,-2);
+  const digits=enc.split('').map(c=>FE[c]);
+  if(digits.some(d=>d===undefined)) return null;
+  const id=parseInt(digits.join(''));
+  if(isNaN(id)||id<0||id>=MAP_W*MAP_W) return null;
+  return {id,x:id%MAP_W,y:Math.floor(id/MAP_W)};
+}
+function tileLL(tx,ty){
+  return[(tx/512)*360-180,(Math.atan(Math.sinh(Math.PI-(2*Math.PI*ty)/512))*180)/Math.PI];
+}
+
+// Represent each fog block by its center and retain its visited-pixel count.
+function parseTileBlocks(tx,ty,data){
+  let raw;
+  try{raw=pako.inflate(new Uint8Array(data));}catch(e){return null;}
+  const header=new Uint16Array(raw.slice(0,TH_SIZE).buffer);
+  const TOTAL=MAP_W*TW*BM_W;
+  const blocks=[];
+  for(let i=0;i<header.length;i++){
+    const bi=header[i];
+    if(!bi) continue;
+    const bLX=i%TW, bLY=Math.floor(i/TW);
+    const gx=tx*TW*BM_W+bLX*BM_W+BM_W/2;
+    const gy=ty*TW*BM_W+bLY*BM_W+BM_W/2;
+    const lng=(gx/TOTAL)*360-180;
+    const lat=(Math.atan(Math.sinh(Math.PI-(2*Math.PI*gy)/TOTAL))*180)/Math.PI;
+    const off=TH_SIZE+(bi-1)*BLK;
+    const bm=raw.slice(off,off+BM_SZ);
+    let v=0;
+    for(let b=0;b<BM_SZ;b++) v+=POPCNT[bm[b]];
+    blocks.push({lng,lat,v,total:BM_W*BM_W}); // v: visited pixels; total: pixels per block.
+  }
+  return blocks;
+}
+
+// Base map
+const leafMap=L.map('map',{center:[46.5,2.3],zoom:6,preferCanvas:true});
+let tileL;
+function addTile(){
+  const service=theme==='dark'
+    ?'Canvas/World_Dark_Gray_Base'
+    :'Canvas/World_Light_Gray_Base';
+  const url=`https://server.arcgisonline.com/ArcGIS/rest/services/${service}/MapServer/tile/{z}/{y}/{x}`;
+  return L.tileLayer(url,{
+    attribution:'Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors, and the GIS user community',
+    maxNativeZoom:16,
+    maxZoom:19
+  }).addTo(leafMap);
+}
+tileL=addTile();
+
+// Application state
+let curLevel='region';
+const GEO_URLS={
+  region:'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/regions.geojson',
+  dept:'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson',
+  commune:'https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/communes.geojson'
+};
+const FB={w:-5.5,e:9.5,s:41.3,n:51.2};
+let geoCache={};
+let allBlocks=[];
+let results={};
+let geoLayers={};
+let selCode=null;
+let irisDepCode=null;    // Currently loaded department code.
+let irisLoading=false;
+
+// Geometry helpers
+function pip(lng,lat,ring){
+  let ins=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const xi=ring[i][0],yi=ring[i][1],xj=ring[j][0],yj=ring[j][1];
+    if(((yi>lat)!==(yj>lat))&&(lng<(xj-xi)*(lat-yi)/(yj-yi)+xi)) ins=!ins;
+  }
+  return ins;
+}
+function ptInFeat(lng,lat,feat){
+  const g=feat.geometry;
+  if(g.type==='Polygon') return pip(lng,lat,g.coordinates[0]);
+  if(g.type==='MultiPolygon') return g.coordinates.some(p=>pip(lng,lat,p[0]));
+  return false;
+}
+function geomBbox(feat){
+  const g=feat.geometry;
+  let w=Infinity,e=-Infinity,s=Infinity,n=-Infinity;
+  function walk(c){if(typeof c[0]==='number'){w=Math.min(w,c[0]);e=Math.max(e,c[0]);s=Math.min(s,c[1]);n=Math.max(n,c[1]);}else c.forEach(walk);}
+  if(g.type==='Polygon') g.coordinates.forEach(walk);
+  else if(g.type==='MultiPolygon') g.coordinates.forEach(p=>p.forEach(walk));
+  return{w,e,s,n};
+}
+
+// Coverage denominator: approximate polygon area divided by nominal block area.
+
+function sphericalArea(feat){
+  // Estimate area in square degrees from exterior rings; holes are not subtracted.
+  const g=feat.geometry;
+  let area=0;
+  function ringArea(ring){
+    let a=0;
+    for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+      a+=(ring[j][0]+ring[i][0])*(ring[j][1]-ring[i][1]);
+    }
+    return Math.abs(a)/2;
+  }
+  if(g.type==='Polygon') area=ringArea(g.coordinates[0]);
+  else if(g.type==='MultiPolygon') g.coordinates.forEach(p=>area+=ringArea(p[0]));
+  return area; // Square degrees.
+}
+
+// Scales the estimated total area: higher values decrease coverage percentages.
+const CALIB_FACTOR = 0.7615;
+
+function estimateTotalBlocks(feat){
+  const blkLng=360/(MAP_W*TW);
+  const blkLatEq=180/(MAP_W*TW);
+  const areaDeg2=sphericalArea(feat);
+  const blkArea=blkLng*blkLatEq;
+  return Math.max(1, (areaDeg2/blkArea) * CALIB_FACTOR);
+}
+
+// Coverage statistics
+function featureIdForLevel(feat, level){
+  const p=feat.properties||{};
+  if(level==='iris') return {code: normCode(p.iris_code||p.code||'?'), name: firstVal(p.iris_name)||p.nom||p.name||'?'};
+  return {code: normCode(p.code||p.CODE||p.insee||'?'), name: firstVal(p.nom)||firstVal(p.name)||p.NOM||'?'};
+}
+async function computeLevel(geojson, level){
+  const stats={};
+  // Sort by area so each block is assigned to the smallest containing feature.
+  const indexed=geojson.features.map(feat=>{
+    const bb=geomBbox(feat);
+    const area=sphericalArea(feat);
+    const {code,name}=featureIdForLevel(feat,level);
+    return{feat,bb,area,code,name,totalPx:estimateTotalBlocks(feat)*(BM_W*BM_W)};
+  });
+  indexed.sort((a,b)=>a.area-b.area);
+  for(const e of indexed) stats[e.code]={name:e.name,code:e.code,discPixels:0,totalPixels:e.totalPx,pct:0,feature:e.feat};
+  if(!allBlocks.length) return stats;
+  let bW=Infinity,bE=-Infinity,bS=Infinity,bN=-Infinity;
+  for(const blk of allBlocks){if(blk.lng<bW)bW=blk.lng;if(blk.lng>bE)bE=blk.lng;if(blk.lat<bS)bS=blk.lat;if(blk.lat>bN)bN=blk.lat;}
+  // Assign each block using its center; retain its actual visited-pixel count.
+  for(let bi=0;bi<allBlocks.length;bi++){
+    if(bi&&bi%200===0) await pause();
+    const blk=allBlocks[bi];
+    if(blk.lng<bW||blk.lng>bE||blk.lat<bS||blk.lat>bN) continue;
+    for(const e of indexed){
+      if(blk.lng<e.bb.w||blk.lng>e.bb.e||blk.lat<e.bb.s||blk.lat>e.bb.n) continue;
+      if(ptInFeat(blk.lng,blk.lat,e.feat)){stats[e.code].discPixels+=blk.v;break;}
+    }
+  }
+  for(const e of indexed){const st=stats[e.code];st.pct=Math.min(100,(st.discPixels/st.totalPixels)*100);}
+  return stats;
+}
+
+// Coverage colors
+function cs(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function firstVal(v){return Array.isArray(v)?(v[0]??''):v;}
+function normCode(v){return String(firstVal(v)||'').trim();}
+function pctColor(pct){
+  if(pct<=0)   return '#1e1e1e';
+  const stops=[
+    [0,   [30, 30, 30]],
+    [0.5, [120,20, 20]],
+    [1,   [180,45, 10]],
+    [2,   [210,90,  5]],
+    [5,   [220,140, 5]],
+    [10,  [200,190, 20]],
+    [20,  [120,190, 30]],
+    [30,  [60, 170, 50]],
+    [50,  [30, 150,100]],
+    [75,  [20, 130,160]],
+    [100, [10, 100,200]]
+  ];
+  for(let i=0;i<stops.length-1;i++){
+    const [t0,c0]=stops[i], [t1,c1]=stops[i+1];
+    if(pct<=t1){
+      const f=(pct-t0)/(t1-t0);
+      const r=Math.round(c0[0]+(c1[0]-c0[0])*f);
+      const g=Math.round(c0[1]+(c1[1]-c0[1])*f);
+      const b=Math.round(c0[2]+(c1[2]-c0[2])*f);
+      return `rgb(${r},${g},${b})`;
+    }
+  }
+  return 'rgb(10,100,200)';
+}
+function pctBar(pct){
+  if(pct>=50) return 'ca';
+  if(pct>=20) return 'cb';
+  if(pct>=5)  return 'cc';
+  if(pct>0.5) return 'cd';
+  if(pct>0)   return 'cd';
+  return 'ce';
+}
+function lvlLbl(l){return l==='region'?'Région':l==='dept'?'Département':l==='commune'?'Commune':'IRIS';}
+function fmtPct(pct){
+  if(pct===0) return '0.0000%';
+  if(pct<0.01) return pct.toFixed(5)+'%';
+  if(pct<0.1) return pct.toFixed(4)+'%';
+  if(pct<1) return pct.toFixed(3)+'%';
+  if(pct<10) return pct.toFixed(3)+'%';
+  return pct.toFixed(2)+'%';
+}
+function fmtPctShort(pct){
+  if(pct===0) return '0.0000%';
+  if(pct<0.01) return pct.toFixed(5)+'%';
+  if(pct<1) return pct.toFixed(4)+'%';
+  if(pct<10) return pct.toFixed(3)+'%';
+  return pct.toFixed(2)+'%';
+}
+
+// Administrative map layers
+async function renderLayer(level){
+  if(level==='iris') return; // IRIS layers are rendered by loadIrisForDep.
+
+  if (communeDeptOverlay) {
+    leafMap.removeLayer(communeDeptOverlay);
+    communeDeptOverlay = null;
+  }
+
+  const geo = await loadGeo(level);
+  if(!results[level]) return;
+  const stats = results[level];
+
+  // Remove existing administrative layers before rendering the selected level.
+  Object.values(geoLayers).forEach(l => { if(l) leafMap.removeLayer(l); });
+  geoLayers = {};
+
+  const layer = L.geoJSON(geo,{
+    style: feat => {
+      const code = normCode(feat.properties.code||feat.properties.CODE||feat.properties.insee||'');
+      const s = stats[code];
+      const pct = s ? s.pct : 0;
+      const opFill = pct>50 ? 0.82 : pct>20 ? 0.75 : pct>5 ? 0.68 : pct>0 ? 0.60 : 0.08;
+      const bWeight = level==='region' ? 2.5 : level==='dept' ? 1.8 : 1.2;
+      const bColor  = level==='region'
+        ? 'rgba(255,255,255,0.55)'
+        : level==='dept'
+        ? 'rgba(255,255,255,0.35)'
+        : 'rgba(255,255,255,0.2)';
+      return { fillColor: pctColor(pct), fillOpacity: opFill, color: bColor, weight: bWeight };
+    },
+    onEachFeature:(feat,l)=> {
+      const code = normCode(feat.properties.code||feat.properties.CODE||feat.properties.insee||'');
+      const s = stats[code];
+      const pct = s ? s.pct : 0;
+      const name = s ? s.name : code;
+      l.on({
+        mouseover:e=>{
+          const w = level==='region'?3.5:level==='dept'?2.5:1.8;
+          e.target.setStyle({
+            fillOpacity:Math.max(pct>0?0.92:0.35,0.35),
+            color:'rgba(255,255,255,0.7)',
+            weight:w
+          });
+          showInfo(name,level,pct);
+        },
+        mouseout:e=>{
+          layer.resetStyle(e.target);
+          hideInfo();
+        },
+        click:e=>{
+          leafMap.fitBounds(e.target.getBounds(),{padding:[24,24]});
+          showInfo(name,level,pct,true);
+          hlItem(code);
+          scrollToItem(code);
+        }
+      });
+    }
+  }).addTo(leafMap);
+
+  geoLayers[level] = layer;
+
+  if (level === 'commune') {
+    const deptGeo = await loadGeo('dept');
+    communeDeptOverlay = L.geoJSON(deptGeo, {
+      interactive: false,
+      style: () => ({
+        color: '#111111',
+        weight: 1.5,
+        fill: false,
+        opacity: 1
+      })
+    }).addTo(leafMap);
+  }
+
+  if (geoLayers[level].getBounds().isValid())
+    leafMap.fitBounds(geoLayers[level].getBounds(),{padding:[24,24]});
+}
+
+// Hover information panel
+function showInfo(name,level,pct){
+  const p=document.getElementById('ifl');
+  document.getElementById('ifl-n').textContent=name;
+  document.getElementById('ifl-t').textContent=lvlLbl(level);
+  document.getElementById('ifl-p').textContent=fmtPct(pct);
+  p.classList.remove('hide');
+}
+function hideInfo(){document.getElementById('ifl').classList.add('hide');}
+
+// Sidebar and search
+function buildSidebar(){
+  const sb=document.getElementById('sb');
+  sb.innerHTML=`
+    <div class="tabs" id="tabs">
+      <button class="tab ${curLevel==='region'?'on':''}" data-l="region">Régions</button>
+      <button class="tab ${curLevel==='dept'?'on':''}" data-l="dept">Dép.</button>
+      <button class="tab ${curLevel==='commune'?'on':''}" data-l="commune">Communes</button>
+      <button class="tab ${curLevel==='iris'?'on':''}" data-l="iris">IRIS</button>
+    </div>
+    <div id="sc"></div>`;
+  document.querySelectorAll('.tab').forEach(btn=>btn.addEventListener('click',async()=>{
+    curLevel=btn.dataset.l;
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.l===curLevel));
+    if(curLevel==='iris'){
+      fillStats();
+    } else {
+      fillStats();
+      await renderLayer(curLevel);
+    }
+  }));
+  fillStats();
+}
+
+function fillStats(){
+  const sc=document.getElementById('sc');
+  if(!sc) return;
+  if(curLevel==='iris'){ fillStatsIris(sc); return; }
+  if(!results[curLevel]) return;
+  const items=Object.values(results[curLevel]).sort((a,b)=>b.pct-a.pct);
+  const tDisc=items.reduce((s,i)=>s+i.discPixels,0);
+  const tTot=items.reduce((s,i)=>s+i.totalPixels,0);
+  const gPct=tTot>0?Math.min(100,(tDisc/tTot)*100):0;
+  const nz=items.filter(i=>i.pct>0).length;
+  sc.innerHTML=`
+    <div class="gst">
+      <div class="gst-l">France métropolitaine — ${lvlLbl(curLevel)}</div>
+      <div class="gst-v">${fmtPct(gPct)}</div>
+      <div class="gst-s">${nz} / ${items.length} ${curLevel==='region'?'région(s)':curLevel==='dept'?'dép.':curLevel==='commune'?'commune(s)':'IRIS'} visité(s)</div>
+    </div>
+    <div class="srch">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="srch" type="text" placeholder="Rechercher…" autocomplete="off"/>
+    </div>
+    <div class="elist" id="el"></div>`;
+  renderList(items,'');
+  document.getElementById('srch').addEventListener('input',e=>renderList(items,e.target.value.toLowerCase()));
+}
+
+async function loadIrisForDep(depCode, depName){
+  depCode=normCode(depCode);
+  if(irisLoading) return;
+  irisLoading=true;
+  const sc=document.getElementById('sc');
+  if(sc) sc.innerHTML=`<div style="padding:var(--s6);text-align:center">
+    <p style="font-size:var(--sm);color:var(--txm);margin-bottom:var(--s4)">Chargement IRIS — ${depName}…</p>
+    <div class="pb-bg"><div class="pb-fill" style="width:40%"></div></div>
+  </div>`;
+  try{
+    const geo=await loadGeo('iris',depCode);
+    if(sc) sc.innerHTML=`<div style="padding:var(--s6);text-align:center"><p style="font-size:var(--xs);color:var(--txm)">Calcul en cours… ${geo.features.length} IRIS</p></div>`;
+    const key='iris_'+depCode;
+    results[key]=await computeLevel(geo,'iris');
+    irisDepCode=depCode;
+    Object.values(geoLayers).forEach(l=>l&&leafMap.removeLayer(l));
+    geoLayers={};
+    const stats=results[key];
+    const irisLayer=L.geoJSON(geo,{
+      style:feat=>{
+        const code=normCode((feat.properties||{}).iris_code||'?');
+        const st=stats[code]; const pct=st?st.pct:0;
+        const opIris = pct>=50?0.82 : pct>=20?0.75 : pct>=5?0.68 : pct>0?0.60 : 0.06;
+        return{fillColor:pctColor(pct),fillOpacity:opIris,color:'rgba(255,255,255,0.22)',weight:0.7};
+      },
+      onEachFeature:(feat,layer)=>{
+        const p=feat.properties||{}; const code=normCode(p.iris_code||'?');
+        const st=stats[code]; const pct=st?st.pct:0;
+        const name=st?st.name:(p.iris_name||code);
+        const com=p.com_name||''; const dep=p.dep_name||'';
+        layer.on({
+          mouseover:e=>{e.target.setStyle({fillOpacity:Math.max(pct>0?0.8:0.3,0.3),color:'rgba(255,255,255,0.5)',weight:1.5});showInfo(name+' ('+com+')',  'iris',pct);},
+          mouseout:e=>{irisLayer.resetStyle(e.target);hideInfo();},
+          click:e=>{leafMap.fitBounds(e.target.getBounds(),{padding:[20,20]});showInfo(name+' — '+com,'iris',pct,true);hlItem(code);}
+        });
+      }
+    }).addTo(leafMap);
+    geoLayers['iris']=irisLayer;
+    leafMap.fitBounds(irisLayer.getBounds(),{padding:[20,20]});
+  } catch(err){
+    console.error(err);
+    if(sc) sc.innerHTML=`<div class="empty"><h3>Erreur chargement</h3><p>${err.message}</p><button class="btn" onclick="irisDepCode=null;fillStats()">← Retour</button></div>`;
+    irisLoading=false; return;
+  }
+  irisLoading=false;
+  fillStats();
+}
+
+function renderList(items,q){
+  const el=document.getElementById('el');
+  if(!el) return;
+  const list=q?items.filter(i=>i.name.toLowerCase().includes(q)):items;
+  el.innerHTML=list.map((it,idx)=>`
+    <div class="ei${normCode(it.code)===normCode(selCode)?' sel':''}" data-code="${normCode(it.code)}" onclick="selEnt(this.dataset.code)">
+      <span class="ei-rk">${idx+1}</span>
+      <div class="ei-bar">
+        <div class="ei-name">${it.name}</div>
+        <div class="ei-bg"><div class="ei-fill ${pctBar(it.pct)}" style="width:${Math.min(it.pct,100).toFixed(2)}%"></div></div>
+      </div>
+      <span class="ei-pct">${fmtPctShort(it.pct)}</span>
+    </div>`).join('');
+}
+
+function selEnt(code){
+  code=normCode(code);
+  selCode=code;
+  const resKey=(curLevel==='iris'&&irisDepCode)?('iris_'+irisDepCode):curLevel;
+  const layerKey=(curLevel==='iris')?'iris':curLevel;
+  if(!results[resKey]||!results[resKey][code]) return;
+  const st=results[resKey][code];
+  const layer=geoLayers[layerKey];
+  if(layer&&layer.eachLayer){
+    layer.eachLayer(l=>{
+      const p=(l.feature&&l.feature.properties)||{};
+      const fc=normCode(p.iris_code||p.code||p.CODE||p.insee||'?');
+      if(fc===code){
+        leafMap.fitBounds(l.getBounds(),{padding:[30,30]});
+        showInfo(st.name,curLevel,st.pct,true);
+      }
+    });
+  }
+  hlItem(code);
+  scrollToItem(code);
+}
+function hlItem(code){selCode=code;document.querySelectorAll('.ei').forEach(el=>el.classList.toggle('sel',el.dataset.code===code));}
+function scrollToItem(code){const el=document.querySelector('.ei[data-code="'+code+'"]');if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});}
+
+// Progress feedback
+function setStatus(msg,pct){
+  let pw=document.getElementById('pw');
+  if(!pw){
+    document.getElementById('sb').innerHTML=`<div id="pw" style="padding:var(--s4)">
+      <p class="pm" id="pmsg">${msg}</p>
+      <div class="pb-bg"><div class="pb-fill" id="pbar"></div></div>
+    </div>`;
+  } else {
+    const pm=document.getElementById('pmsg');
+    if(pm) pm.textContent=msg;
+  }
+  const pb=document.getElementById('pbar');
+  if(pb) pb.style.width=pct+'%';
+}
+
+// File processing and geographic data loading
+async function processFiles(files){
+  setStatus('Lecture des fichiers Fog of World…',5);
+  allBlocks=[];
+  let valid=0;
+  for(let i=0;i<files.length;i++){
+    const f=files[i];
+    const dec=decodeFilename(f.name);
+    if(!dec) continue;
+    const {x,y}=dec;
+    const [lng0,lat0]=tileLL(x,y+1);
+    const [lng1,lat1]=tileLL(x+1,y);
+    if(lng1>=FB.w-1&&lng0<=FB.e+1&&lat1>=FB.s-1&&lat0<=FB.n+1){
+      const buf=await f.arrayBuffer();
+      const blks=parseTileBlocks(x,y,buf);
+      if(blks){
+        for(const b of blks){
+          if(b.lng>=FB.w-0.1&&b.lng<=FB.e+0.1&&b.lat>=FB.s-0.1&&b.lat<=FB.n+0.1)
+            allBlocks.push(b);
+        }
+        valid++;
+      }
+    }
+    if(i%5===0) setStatus(`Lecture des tuiles… ${i+1}/${files.length}`,5+((i+1)/files.length)*40);
+  }
+  setStatus(`${valid} tuile(s). ${allBlocks.length.toLocaleString('fr')} blocs découverts. Chargement géo…`,48);
+  try{
+    setStatus('Chargement des régions…',50);
+    const rG=await loadGeo('region');
+    setStatus('Calcul régions…',55);
+    results.region=await computeLevel(rG,'region');
+
+    setStatus('Chargement des départements…',60);
+    const dG=await loadGeo('dept');
+    setStatus('Calcul départements…',65);
+    results.dept=await computeLevel(dG,'dept');
+
+    setStatus('Chargement des communes…',72);
+    const cG=await loadGeo('commune');
+    setStatus('Calcul communes…',78);
+    results.commune=await computeLevel(cG,'commune');
+
+    setStatus('Rendu de la carte…',93);
+    await renderLayer(curLevel);
+    buildSidebar();
+  } catch(err){
+    console.error(err);
+    setStatus('Erreur réseau — vérifiez votre connexion internet.',0);
+  }
+}
+
+async function loadGeo(level, depCode){
+  if(level!=='iris'){
+    if(geoCache[level]) return geoCache[level];
+    const r=await fetch(GEO_URLS[level]);
+    if(!r.ok) throw new Error(`GeoJSON ${level} indisponible`);
+    geoCache[level]=await r.json();
+    return geoCache[level];
+  }
+  // Fetch and cache IRIS boundaries for the selected department.
+  const key='iris_'+depCode;
+  if(geoCache[key]) return geoCache[key];
+  const url=`https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/georef-france-iris/exports/geojson?limit=2000&refine=dep_code%3A%22${depCode}%22`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error(`IRIS ${depCode} indisponible`);
+  geoCache[key]=await r.json();
+  return geoCache[key];
+}
+
+// Department boundaries displayed over the commune layer.
+let communeDeptOverlay = null;
+
+// File selection and recursive folder import
+const dz=document.getElementById('dz'),fi=document.getElementById('fi');
+dz.addEventListener('click',()=>fi.click());
+fi.addEventListener('change',e=>go(Array.from(e.target.files)));
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',async e=>{
+  e.preventDefault();dz.classList.remove('over');
+  const files=[];
+  const ps=[];
+  for(const item of e.dataTransfer.items){
+    if(item.kind!=='file') continue;
+    const entry=item.webkitGetAsEntry&&item.webkitGetAsEntry();
+    if(entry&&entry.isDirectory) ps.push(readDir(entry,files));
+    else{const f=item.getAsFile();if(f)files.push(f);}
+  }
+  await Promise.all(ps);
+  go(files);
+});
+function readDir(dir,files){
+  return new Promise(res=>{
+    const rdr=dir.createReader();
+    const go=()=>rdr.readEntries(entries=>{
+      if(!entries.length){res();return;}
+      Promise.all(entries.map(e=>{
+        if(e.isFile) return new Promise(r=>e.file(f=>{files.push(f);r();}));
+        if(e.isDirectory) return readDir(e,files);
+        return Promise.resolve();
+      })).then(go);
+    });
+    go();
+  });
+}
+function go(files){if(files.length) processFiles(files);}
+
+// IRIS boundaries loaded on demand by department
+
+function fmtPctShort2(v){ return v===0?'0%':v<0.1?'<0.1%':v.toFixed(1)+'%'; }
+
+function fillStatsIris(sc){
+  if(!results.dept){
+    sc.innerHTML=`<div class="empty">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      <h3>Aucune donnée</h3>
+      <p>Importe ton dossier Sync d'abord</p>
+    </div>`;
+    return;
+  }
+
+  if(irisDepCode && results['iris_'+irisDepCode]){
+    const irisKey = 'iris_'+irisDepCode;
+    const depEntry = results.dept[normCode(irisDepCode)];
+    const depName = depEntry ? depEntry.name : irisDepCode;
+    const items = Object.values(results[irisKey]).sort((a,b)=>b.pct-a.pct);
+    const tDisc = items.reduce((s,i)=>s+i.discPixels,0);
+    const tTot  = items.reduce((s,i)=>s+i.totalPixels,0);
+    const gPct  = tTot>0 ? Math.min(100,(tDisc/tTot)*100) : 0;
+    const nz    = items.filter(i=>i.pct>0).length;
+    sc.innerHTML=`
+      <div class="gst">
+        <div class="gst-l" style="display:flex;align-items:center;gap:6px">
+          <button onclick="irisDepCode=null;fillStats();" style="color:var(--pr);font-size:var(--xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0">← Changer</button>
+          <span>IRIS — ${depName}</span>
+        </div>
+        <div class="gst-v">${fmtPct(gPct)}</div>
+        <div class="gst-s">${nz} / ${items.length} IRIS visités</div>
+      </div>
+      <div class="srch">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="srch" type="text" placeholder="Rechercher un IRIS…" autocomplete="off"/>
+      </div>
+      <div class="elist" id="el"></div>`;
+    renderList(items,'');
+    document.getElementById('srch').addEventListener('input',e=>renderList(items,e.target.value.toLowerCase()));
+    return;
+  }
+
+  const depts  = Object.values(results.dept).sort((a,b)=>b.pct-a.pct);
+  const visited = depts.filter(d=>d.pct>0);
+  const list = visited.length ? visited : depts.slice(0,30);
+  const rows = list.map(d=>`
+    <div class="ei" style="cursor:pointer" data-code="${normCode(d.code)}" data-name="${String(d.name).replace(/"/g,'&quot;')}" onclick="loadIrisForDep(this.dataset.code,this.dataset.name)">
+      <div class="ei-bar">
+        <div class="ei-name">${d.name}</div>
+        <div style="font-size:var(--xs);color:var(--txm)">${fmtPctShort2(d.pct)} couvert</div>
+      </div>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;color:var(--pr)"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`).join('');
+
+  sc.innerHTML=`
+    <div class="gst">
+      <div class="gst-l">IRIS — Choisir un département</div>
+      <div style="font-size:var(--xs);color:var(--txm);margin-top:4px">
+        ${visited.length ? visited.length+' département(s) visité(s)' : 'Tous les départements'}
+      </div>
+    </div>
+    <div class="elist">${rows}</div>`;
+}
+
+async function loadIrisForDep(depCode, depName){
+  depCode=normCode(depCode);
+  if(irisLoading) return;
+  irisLoading = true;
+  const sc = document.getElementById('sc');
+  if(sc) sc.innerHTML=`<div style="padding:var(--s6);text-align:center">
+    <p style="font-size:var(--sm);color:var(--txm);margin-bottom:var(--s4)">Chargement IRIS — ${depName}…</p>
+    <div class="pb-bg"><div class="pb-fill" style="width:40%"></div></div>
+  </div>`;
+  try{
+    const geo = await loadGeo('iris', depCode);
+    if(sc) sc.innerHTML=`<div style="padding:var(--s6);text-align:center">
+      <p style="font-size:var(--xs);color:var(--txm)">Calcul en cours… ${geo.features.length} IRIS</p>
+    </div>`;
+    const key = 'iris_'+depCode;
+    results[key] = await computeLevel(geo,'iris');
+    irisDepCode = depCode;
+
+    Object.values(geoLayers).forEach(l=>l&&leafMap.removeLayer(l));
+    geoLayers = {};
+    const stats = results[key];
+    const irisLayer = L.geoJSON(geo,{
+      style: feat=>{
+        const code=normCode((feat.properties||{}).iris_code||'?');
+        const st=stats[code]; const pct=st?st.pct:0;
+        const opIris2 = pct>=50?0.82 : pct>=20?0.75 : pct>=5?0.68 : pct>0?0.60 : 0.06;
+        return{fillColor:pctColor(pct),fillOpacity:opIris2,color:'rgba(255,255,255,0.22)',weight:0.7};
+      },
+      onEachFeature:(feat,layer)=>{
+        const p=feat.properties||{};
+        const code=normCode(p.iris_code||'?');
+        const st=stats[code]; const pct=st?st.pct:0;
+        const name=st?st.name:(p.iris_name||code);
+        const com=p.com_name||'';
+        layer.on({
+          mouseover:e=>{ e.target.setStyle({fillOpacity:Math.max(pct>0?0.85:0.3,0.3),color:'rgba(255,255,255,0.5)',weight:1.5}); showInfo(name+' ('+com+')','iris',pct); },
+          mouseout:e=>{ irisLayer.resetStyle(e.target); hideInfo(); },
+          click:e=>{ leafMap.fitBounds(e.target.getBounds(),{padding:[20,20]}); showInfo(name+' — '+com,'iris',pct,true); hlItem(code); scrollToItem(code); }
+        });
+      }
+    }).addTo(leafMap);
+    geoLayers['iris'] = irisLayer;
+    leafMap.fitBounds(irisLayer.getBounds(),{padding:[20,20]});
+  } catch(err){
+    console.error('[IRIS]',err);
+    if(sc) sc.innerHTML=`<div class="empty">
+      <h3>Erreur</h3><p>${err.message}</p>
+      <button class="btn" onclick="irisDepCode=null;irisLoading=false;fillStats();">← Retour</button>
+    </div>`;
+    irisLoading = false;
+    return;
+  }
+  irisLoading = false;
+  fillStats();
+}
+</script>
+</body>
+</html>
